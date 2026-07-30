@@ -81,7 +81,3 @@ _(Filled in as each step is completed — see Build Log.)_
 - [ ] Step 6 — Wire up EventBridge + SNS
 - [ ] Step 7 — End-to-end test
 - [ ] Step 8 — Cleanup & final documentation
-
-## License
-
-MIT
