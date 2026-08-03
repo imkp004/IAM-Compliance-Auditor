@@ -28,6 +28,7 @@ resource "aws_iam_role_policy" "audit_lambda_policy" {
           "iam:ListPolicies",
           "iam:ListAttachedRolePolicies",
           "iam:ListRolePolicies",
+          "iam:GetRolePolicy",
           "iam:GetRole",
           "iam:GetPolicy",
           "iam:GetPolicyVersion"
