@@ -59,3 +59,19 @@ data "archive_file" "audit_lambda_zip" {
   source_file = "../lambda/audit/handler.py"
   output_path = "${path.module}/audit_lambda.zip"
 }
+
+data "archive_file" "summarizer_lambda_zip" {
+  type        = "zip"
+  source_file = "../lambda/summarizer/handler.py"
+  output_path = "${path.module}/summarizer_lambda.zip"
+}
+
+resource "aws_lambda_function" "summarizer_lambda" {
+  function_name    = "${var.project_name}-summarizer-lambda"
+  role             = aws_iam_role.summarizer_lambda.arn
+  handler          = "handler.lambda_handler"
+  runtime          = "python3.12"
+  timeout          = 30
+  filename         = data.archive_file.summarizer_lambda_zip.output_path
+  source_code_hash = data.archive_file.summarizer_lambda_zip.output_base64sha256
+}
