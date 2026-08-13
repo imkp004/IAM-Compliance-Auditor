@@ -105,3 +105,42 @@ resource "aws_iam_role_policy" "summarizer_lambda_policy" {
     ]
   })
 }
+
+
+# Dummy role for test
+
+resource "aws_iam_role" "test_overprivileged" {
+  name = "${var.project_name}-TEST-overprivileged-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+
+  tags = {
+    Purpose = "Deliberate test fixture for audit Lambda - safe to destroy anytime"
+  }
+}
+
+resource "aws_iam_role_policy" "test_overprivileged_policy" {
+  name = "${var.project_name}-TEST-overprivileged-policy"
+  role = aws_iam_role.test_overprivileged.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "IntentionallyTooBroad"
+        Effect   = "Allow"
+        Action   = "*"
+        Resource = "*"
+      }
+    ]
+  })
+}
