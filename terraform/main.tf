@@ -74,4 +74,63 @@ resource "aws_lambda_function" "summarizer_lambda" {
   timeout          = 30
   filename         = data.archive_file.summarizer_lambda_zip.output_path
   source_code_hash = data.archive_file.summarizer_lambda_zip.output_base64sha256
+
+  environment {
+    variables = {
+      SNS_TOPIC_ARN = aws_sns_topic.findings_alerts.arn
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "nightly_audit" {
+  name                = "${var.project_name}-nightly-audit"
+  description         = "Triggers the IAM audit Lambda once per day"
+  schedule_expression = "rate(1 day)"
+}
+
+resource "aws_cloudwatch_event_target" "nightly_audit_target" {
+  rule      = aws_cloudwatch_event_rule.nightly_audit.name
+  target_id = "audit-lambda"
+  arn       = aws_lambda_function.audit_lambda.arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge_audit" {
+  statement_id  = "AllowEventBridgeInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.audit_lambda.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.nightly_audit.arn
+}
+
+
+resource "aws_lambda_permission" "allow_s3_invoke_summarizer" {
+  statement_id  = "AllowS3Invoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.summarizer_lambda.function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.bucket.arn
+}
+
+resource "aws_s3_bucket_notification" "report_created" {
+  bucket = aws_s3_bucket.bucket.id
+
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.summarizer_lambda.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_prefix       = "reports/"
+    filter_suffix       = ".json"
+  }
+
+  depends_on = [aws_lambda_permission.allow_s3_invoke_summarizer]
+}
+
+
+resource "aws_sns_topic" "findings_alerts" {
+  name = "${var.project_name}-findings-alerts"
+}
+
+resource "aws_sns_topic_subscription" "email_alert" {
+  topic_arn = aws_sns_topic.findings_alerts.arn
+  protocol  = "email"
+  endpoint  = "imkp004@gmail.com" # replace with your real email
 }
