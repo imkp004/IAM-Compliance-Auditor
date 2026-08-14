@@ -118,6 +118,20 @@ Anthropic models on Bedrock require a one-time, per-account "use case details" f
 
 Some newer Claude models on Bedrock also require invocation via an **inference profile** (a region-prefixed model ID, e.g. `us.anthropic.claude-haiku-4-5-20251001-v1:0`) rather than the raw model ID.
 
+## Cost
+
+At this project's usage level (one scheduled run per day, small payloads), the whole pipeline costs close to nothing to run:
+
+| Service | Usage | Monthly Cost |
+|---|---|---|
+| Lambda | ~2 invocations/day, a few seconds each | $0 (well within the permanent free tier) |
+| S3 | Two small objects/day (~1-2 KB each) | ~$0 |
+| EventBridge | 1 scheduled rule/day | $0 |
+| SNS | 1 email/day | $0 (free tier covers 1,000/month) |
+| Bedrock (Claude Haiku 4.5) | 1 summarization call/day | ~$0.10–$0.30 |
+
+Bedrock is the only real line item, since it has no free tier — pricing is pay-per-token (roughly $1/M input tokens, $5/M output tokens for Claude Haiku 4.5 as of mid-2026; verify current rates on the [Bedrock pricing page](https://aws.amazon.com/bedrock/pricing/), as they can change). Everything else stays inside AWS's standard free tier at this volume.
+
 ## Notable design decisions & real bugs debugged
 
 This project surfaced several genuine, non-obvious issues worth documenting — the debugging process is arguably more representative of real engineering work than the final code itself:
