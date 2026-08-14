@@ -87,7 +87,7 @@ iam-compliance-auditor/
 
 ```bash
 # 1. Clone and enter the project
-git clone <your-repo-url>
+git clone https://github.com/imkp004/IAM-Compliance-Auditor.git
 cd iam-compliance-auditor/terraform
 
 # 2. Configure AWS credentials
