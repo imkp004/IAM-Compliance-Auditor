@@ -87,7 +87,7 @@ iam-compliance-auditor/
 
 ```bash
 # 1. Clone and enter the project
-git clone https://github.com/imkp004/IAM-Compliance-Auditor.git
+git clone <your-repo-url>
 cd iam-compliance-auditor/terraform
 
 # 2. Configure AWS credentials
@@ -131,6 +131,29 @@ At this project's usage level (one scheduled run per day, small payloads), the w
 | Bedrock (Claude Haiku 4.5) | 1 summarization call/day | ~$0.10–$0.30 |
 
 Bedrock is the only real line item, since it has no free tier — pricing is pay-per-token (roughly $1/M input tokens, $5/M output tokens for Claude Haiku 4.5 as of mid-2026; verify current rates on the [Bedrock pricing page](https://aws.amazon.com/bedrock/pricing/), as they can change). Everything else stays inside AWS's standard free tier at this volume.
+
+### Cost vs. the managed AWS equivalent
+
+AWS sells managed services that overlap with what this project does — IAM Access Analyzer, AWS Config, and Security Hub. Worth being upfront about the comparison rather than pretending this project exists in a vacuum:
+
+| | This project | AWS managed equivalent |
+|---|---|---|
+| Monthly cost | ~$0.10–$0.30 | Roughly $10–$30+/month at this account's scale, depending on which services are enabled |
+| Coverage | One specific, well-defined check (wildcard IAM policies) | Broad: unused access analysis, configuration drift, cross-service correlation, industry compliance frameworks (CIS, PCI-DSS, etc.) |
+| Maintenance | Self-maintained | AWS-maintained |
+
+Specifics, at this account's actual scale (~23 IAM roles, 2 Lambda functions, no EC2):
+- **IAM Access Analyzer** — external access analysis and basic policy validation are free; *unused access analysis* (a check this project doesn't have) is $0.20 per IAM role/user per month — roughly $4.60/month for that one feature alone at this role count.
+- **AWS Config** — charged per configuration item recorded and per rule evaluation; typically lands around $1–3/month at this scale.
+- **AWS Security Hub** — unit-based pricing (IAM roles/users at 1/125 unit, Lambda functions at 1/12 unit, EC2 at 1 unit); at this account's small resource count, usage would be a small fraction of a unit, though the exact per-unit rate should be checked directly via the [AWS Pricing Calculator](https://calculator.aws) rather than assumed.
+
+**Honest conclusion:** this project is dramatically cheaper specifically *because* it does one narrow thing well, not because it's a better security tool overall. For a real company's production AWS account, the managed suite is very likely worth the added cost — broader coverage, no maintenance burden, built-in compliance framework mapping. For a personal or portfolio-scale account, a narrowly-scoped custom tool like this one is the more sensible economic choice. The value of building it wasn't to outcompete AWS's own tooling — it was to understand, hands-on, what that tooling actually does under the hood.
+
+### What it would cost to add this project's own version of that broader coverage
+
+Extending this project to cover more ground — unused role/credential detection, public S3 bucket exposure, security group misconfigurations, cross-report drift over time, compliance-framework labeling on findings — doesn't require turning on any of AWS's paid detection engines. Almost every one of those checks is just another **free, read-only API call** (`get_role`'s `RoleLastUsed` field, `get_bucket_acl`, `describe_security_groups`, etc.), the same pattern already used for the wildcard-policy check. Cross-run drift analysis is just comparing timestamped reports already sitting in S3. Compliance-framework mapping (CIS, PCI-DSS labels) is mostly a prompt-engineering change to what's already sent to Bedrock.
+
+The only real cost impact from self-building this broader coverage is a modestly larger Bedrock prompt per run (more findings, more context) — realistically pushing the monthly Bedrock cost from ~$0.10–$0.30 to somewhere around **~$0.30–$0.60/month**. The $10–30/month figure above only applies if AWS's actual paid detection engines are switched on (Config's recorder, GuardDuty, IAM Access Analyzer's paid unused-access feature) instead of writing the equivalent checks by hand.
 
 ## Notable design decisions & real bugs debugged
 
